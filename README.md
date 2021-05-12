@@ -1,4 +1,4 @@
- # React Native Push Notifications
+# React Native Push Notifications
 
 [![npm version](https://badge.fury.io/js/react-native-push-notification.svg?update=9)](http://badge.fury.io/js/react-native-push-notification)
 [![npm downloads](https://img.shields.io/npm/dm/react-native-push-notification.svg?update=9)](http://badge.fury.io/js/react-native-push-notification)
@@ -57,25 +57,6 @@ Having a problem? Read the [troubleshooting](./trouble-shooting.md) guide before
 ## iOS manual Installation
 
 The component uses PushNotificationIOS for the iOS part. You should follow their [installation instructions](https://github.com/react-native-community/react-native-push-notification-ios).
-
-When done, modify the following method in the file `AppDelegate.m`:
-```objective-c
-// Called when a notification is delivered to a foreground app.
--(void)userNotificationCenter:(UNUserNotificationCenter *)center
-      willPresentNotification:(UNNotification *)notification
-        withCompletionHandler:(void (^)(UNNotificationPresentationOptions options))completionHandler
-{
-  // Still call the JS onNotification handler so it can display the new message right away
-  NSDictionary *userInfo = notification.request.content.userInfo;
-  [RNCPushNotificationIOS didReceiveRemoteNotification:userInfo
-                                fetchCompletionHandler:^void (UIBackgroundFetchResult result){}];
-
-  // allow showing foreground notifications
-  completionHandler(UNNotificationPresentationOptionSound | UNNotificationPresentationOptionAlert | UNNotificationPresentationOptionBadge);
-  // or if you wish to hide all notification while in foreground replace it with 
-  // completionHandler(UNNotificationPresentationOptionNone);
-}
-```
 
 ## Android manual Installation
 
@@ -140,6 +121,17 @@ In `android/app/src/main/res/values/colors.xml` (Create the file if it doesn't e
 <resources>
     <color name="white">#FFF</color>
 </resources>
+```
+
+If your app has an @Override on onNewIntent in `MainActivity.java` ensure that function includes a super call on onNewIntent (if your `MainActivity.java` does not have an @Override for onNewIntent skip this):
+
+```java
+    @Override
+    public void onNewIntent(Intent intent) {
+        ...
+        super.onNewIntent(intent);
+        ...
+    }
 ```
 
 ### If you use remote notifications
@@ -217,10 +209,10 @@ public class MainApplication extends Application implements ReactApplication {
       @Override
       protected List<ReactPackage> getPackages() {
 
-      return Arrays.<ReactPackage>asList(
-          new MainReactPackage(),
-          new ReactNativePushNotificationPackage() // <---- Add the Package
-      );
+          return Arrays.<ReactPackage>asList(
+              new MainReactPackage(),
+              new ReactNativePushNotificationPackage() // <---- Add the Package
+          );
     }
   };
 
@@ -320,7 +312,7 @@ EXAMPLE:
 ```javascript
 PushNotification.localNotification({
   /* Android Only Properties */
-  channelId: "your-channel-id", // (required) channelId, if the channel doesn't exist, it will be created with options passed above (importance, vibration, sound). Once the channel is created, the channel will not be update. Make sure your channelId is different if you change these options. If you have created a custom channel, it will apply options of the channel.
+  channelId: "your-channel-id", // (required) channelId, if the channel doesn't exist, notification will not trigger.
   ticker: "My Notification Ticker", // (optional)
   showWhen: true, // (optional) default: true
   autoCancel: true, // (optional) default: true
@@ -345,7 +337,7 @@ PushNotification.localNotification({
   shortcutId: "shortcut-id", // (optional) If this notification is duplicative of a Launcher shortcut, sets the id of the shortcut, in case the Launcher wants to hide the shortcut, default undefined
   onlyAlertOnce: false, // (optional) alert will open only once with sound and notify, default: false
   
-  when: null, // (optionnal) Add a timestamp pertaining to the notification (usually the time the event occurred). For apps targeting Build.VERSION_CODES.N and above, this time is not shown anymore by default and must be opted into by using `showWhen`, default: null.
+  when: null, // (optional) Add a timestamp (Unix timestamp value in milliseconds) pertaining to the notification (usually the time the event occurred). For apps targeting Build.VERSION_CODES.N and above, this time is not shown anymore by default and must be opted into by using `showWhen`, default: null.
   usesChronometer: false, // (optional) Show the `when` field as a stopwatch. Instead of presenting `when` as a timestamp, the notification will show an automatically updating display of the minutes and seconds since when. Useful when showing an elapsed time (like an ongoing phone call), default: false.
   timeoutAfter: null, // (optional) Specifies a duration in milliseconds after which this notification should be canceled, if it is not already canceled, default: null
 
@@ -411,6 +403,8 @@ In the location notification json specify the full file name:
 To use channels, create them at startup and pass the matching `channelId` through to `PushNotification.localNotification` or `PushNotification.localNotificationSchedule`.
 
 ```javascript
+import PushNotification, {Importance} from 'react-native-push-notification';
+...
   PushNotification.createChannel(
     {
       channelId: "channel-id", // (required)
@@ -418,7 +412,7 @@ To use channels, create them at startup and pass the matching `channelId` throug
       channelDescription: "A channel to categorise your notifications", // (optional) default: undefined.
       playSound: false, // (optional) default: true
       soundName: "default", // (optional) See `soundName` parameter of `localNotification` function
-      importance: 4, // (optional) default: 4. Int value of the Android notification importance
+      importance: Importance.HIGH, // (optional) default: Importance.HIGH. Int value of the Android notification importance
       vibrate: true, // (optional) default: true. Creates the default vibration patten if true.
     },
     (created) => console.log(`createChannel returned '${created}'`) // (optional) callback returns whether the channel was created, false means it already existed.
@@ -586,6 +580,7 @@ Returns an array of local scheduled notification objects containing:
 | soundName      | string | The sound name of this notification.                     |
 | repeatInterval | number | (Android only) The repeat interval of this notification. |
 | number         | number | App notification badge count number.                     |
+| data           | any    | The user info of this notification.                      |
 
 ## Abandon Permissions
 
@@ -597,10 +592,10 @@ Returns an array of local scheduled notification objects containing:
 
 Available options:
 
-"max" = NotficationCompat.PRIORITY_MAX
-"high" = NotficationCompat.PRIORITY_HIGH
-"low" = NotficationCompat.PRIORITY_LOW
-"min" = NotficationCompat.PRIORITY_MIN
+"max" = NotficationCompat.PRIORITY_MAX\
+"high" = NotficationCompat.PRIORITY_HIGH\
+"low" = NotficationCompat.PRIORITY_LOW\
+"min" = NotficationCompat.PRIORITY_MIN\
 "default" = NotficationCompat.PRIORITY_DEFAULT
 
 More information: https://developer.android.com/reference/android/app/Notification.html#PRIORITY_DEFAULT
@@ -611,25 +606,25 @@ More information: https://developer.android.com/reference/android/app/Notificati
 
 Available options:
 
-"private" = NotficationCompat.VISIBILITY_PRIVATE
-"public" = NotficationCompat.VISIBILITY_PUBLIC
-"secret" = NotficationCompat.VISIBILITY_SECRET
+"private" = NotficationCompat.VISIBILITY_PRIVATE\
+"public" = NotficationCompat.VISIBILITY_PUBLIC\
+"secret" = NotficationCompat.VISIBILITY_SECRET 
 
 More information: https://developer.android.com/reference/android/app/Notification.html#VISIBILITY_PRIVATE
 
 ## Notification importance
 
-(optional) Specify `importance` to set importance of notification. Default value: "high"
+(optional) Specify `importance` to set importance of notification. Default value: Importance.HIGH  
+Constants available on the `Importance` object. `import PushNotification, {Importance} from 'react-native-push-notification';`
 
 Available options:
 
-"default" = NotificationManager.IMPORTANCE_DEFAULT
-"max" = NotificationManager.IMPORTANCE_MAX
-"high" = NotificationManager.IMPORTANCE_HIGH
-"low" = NotificationManager.IMPORTANCE_LOW
-"min" = NotificationManager.IMPORTANCE_MIN
-"none" = NotificationManager.IMPORTANCE_NONE
-"unspecified" = NotificationManager.IMPORTANCE_UNSPECIFIED
+Importance.DEFAULT = NotificationManager.IMPORTANCE_DEFAULT\
+Importance.HIGH = NotificationManager.IMPORTANCE_HIGH\
+Importance.LOW = NotificationManager.IMPORTANCE_LOW\
+Importance.MIN = NotificationManager.IMPORTANCE_MIN\
+Importance.NONE= NotificationManager.IMPORTANCE_NONE\
+Importance.UNSPECIFIED = NotificationManager.IMPORTANCE_UNSPECIFIED
 
 More information: https://developer.android.com/reference/android/app/NotificationManager#IMPORTANCE_DEFAULT
 

@@ -4,16 +4,11 @@
 
 'use strict';
 
-import { AppState } from "react-native";
+import { AppState, Platform } from 'react-native';
+import { component } from './component';
 
-var RNNotificationsComponent = require( './component' );
-
-var RNNotifications = RNNotificationsComponent.component;
-
-let Platform = require('react-native').Platform;
-
-var Notifications = {
-  handler: RNNotifications,
+const Notifications = {
+  handler: component,
   onRegister: false,
   onRegistrationError: false,
   onNotification: false,
@@ -145,7 +140,7 @@ Notifications.unregister = function() {
  * @param {String}    details.ticker -  ANDROID ONLY: The ticker displayed in the status bar.
  * @param {Object}    details.userInfo -  iOS ONLY: The userInfo used in the notification alert.
  */
-Notifications.localNotification = function(details) {
+Notifications.localNotification = function({...details}) {
   if ('android' === Platform.os && details && !details.channelId) {
     console.warn('No channel id passed, notifications may not work.');
   }
@@ -183,6 +178,7 @@ Notifications.localNotification = function(details) {
       body: details.message,
       badge: details.number,
       sound: soundName,
+      isSilent: details.playSound === false,
       category: details.category,
       userInfo: details.userInfo
     });
@@ -224,7 +220,7 @@ Notifications.localNotification = function(details) {
  * @param {Object}    details (same as localNotification)
  * @param {Date}    details.date - The date and time when the system should deliver the notification
  */
-Notifications.localNotificationSchedule = function(details) {
+Notifications.localNotificationSchedule = function({...details}) {
   if ('android' === Platform.os && details && !details.channelId) {
     console.warn('No channel id passed, notifications may not work.');
   }
@@ -258,6 +254,7 @@ Notifications.localNotificationSchedule = function(details) {
       title: details.title,
       body: details.message,
       sound: soundName,
+      isSilent: details.playSound === false,
       category: details.category,
       userInfo: details.userInfo,
       repeats: (details.repeatType && details.repeatType == "day"),
@@ -329,7 +326,7 @@ Notifications._onRemoteFetch = function(notificationData) {
   }
 };
 
-Notifications._onAction = function(notification) {
+Notifications._onAction = function({...notification}) {
   if ( typeof notification.data === 'string' ) {
     try {
       notification.data = JSON.parse(notificationData.data);
@@ -349,7 +346,8 @@ Notifications._transformNotificationObject = function(data, isFromBackground = n
   if ( isFromBackground === null ) {
     isFromBackground = (
       data.foreground === false ||
-      AppState.currentState === 'background'
+      AppState.currentState === 'background' ||
+      AppState.currentState === 'unknown'
     );
   }
 
@@ -605,5 +603,15 @@ Notifications.deleteChannel = function() {
 Notifications.setNotificationCategories = function() {
   return this.callNative('setNotificationCategories', arguments);
 }
+
+// https://developer.android.com/reference/android/app/NotificationManager#IMPORTANCE_DEFAULT
+Notifications.Importance = Object.freeze({
+  DEFAULT: 3,
+  HIGH: 4,
+  LOW: 2,
+  MIN: 1,
+  NONE: 0,
+  UNSPECIFIED: -1000,
+});
 
 module.exports = Notifications;
